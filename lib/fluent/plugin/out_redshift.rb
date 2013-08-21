@@ -84,8 +84,8 @@ class RedshiftOutput < BufferedOutput
 
   def write(chunk)
     $log.warn format_log("start creating gz.")
-    
-    $log.warn format_log("#{chunk}")
+      
+    $log.warn format_log("0")
 
     # create a gz file
     tmp = Tempfile.new("s3-")
@@ -101,6 +101,8 @@ class RedshiftOutput < BufferedOutput
       $log.warn format_log("received no valid data. ")
       return false # for debug
     end
+      
+    $log.warn format_log("1")
 
     # create a file path with time format
     s3path = create_s3path(@bucket, @path)
@@ -159,12 +161,17 @@ class RedshiftOutput < BufferedOutput
   def create_gz_file_from_structured_data(dst_file, chunk, delimiter)
     # fetch the table definition from redshift
     redshift_table_columns = fetch_table_columns
+      
+    $log.warn format_log("01")
     if redshift_table_columns == nil
+      $log.warn format_log("02 error")
       raise "failed to fetch the redshift table definition."
     elsif redshift_table_columns.empty?
       $log.warn format_log("no table on redshift. table_name=#{table_name_with_schema}")
       return nil
     end
+    
+    $log.warn format_log("03")
 
     # convert json to tsv format text
     gzw = nil
@@ -175,6 +182,8 @@ class RedshiftOutput < BufferedOutput
           hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
           tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
           gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
+    
+          $log.warn format_log("031")
           
         rescue => e
           if json?
@@ -191,6 +200,8 @@ class RedshiftOutput < BufferedOutput
       gzw.close rescue nil if gzw
     end
     dst_file
+    
+    $log.warn format_log("04")
   end
 
   def determine_delimiter(file_type)
