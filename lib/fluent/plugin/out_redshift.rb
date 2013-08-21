@@ -174,8 +174,6 @@ class RedshiftOutput < BufferedOutput
           tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
           gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
           
-          $log.warn format_log(tsv_text)
-          
         rescue => e
           if json?
             $log.warn format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
@@ -235,6 +233,8 @@ class RedshiftOutput < BufferedOutput
 
   def hash_to_table_text(redshift_table_columns, hash, delimiter)
     return "" unless hash
+          
+    $log.warn format_log("hash_to_table_text - data=#{hash} table_columns=#{redshift_table_columns}")
 
     # extract values from hash
     val_list = redshift_table_columns.collect do |cn|
