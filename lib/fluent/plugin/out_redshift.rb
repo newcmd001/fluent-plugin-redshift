@@ -83,7 +83,7 @@ class RedshiftOutput < BufferedOutput
   end
 
   def write(chunk)
-    $log.debug format_log("start creating gz.")
+    $log.warn format_log("start creating gz.")
 
     # create a gz file
     tmp = Tempfile.new("s3-")
@@ -175,9 +175,9 @@ class RedshiftOutput < BufferedOutput
           gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
         rescue => e
           if json?
-            $log.error format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.warn format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
           else
-            $log.error format_log("failed to create table text from msgpack. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.warn format_log("failed to create table text from msgpack. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
           end
 
           $log.error_backtrace
