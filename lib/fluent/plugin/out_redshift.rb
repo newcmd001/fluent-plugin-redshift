@@ -93,6 +93,9 @@ class RedshiftOutput < BufferedOutput
       else
         create_gz_file_from_flat_data(tmp, chunk)
       end
+      
+    $log.warn format_log(tmp)
+    $log.warn format_log(chunk)
 
     # no data -> skip
     unless tmp
