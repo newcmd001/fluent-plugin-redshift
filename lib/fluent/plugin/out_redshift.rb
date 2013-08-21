@@ -74,8 +74,10 @@ class RedshiftOutput < BufferedOutput
 
   def format(tag, time, record)
     if json?
+      $log.warn format_log("10 #{record}")
       $log.warn format_log("10")
       record.to_msgpack
+      $log.warn format_log("10 #{record}")
     elsif msgpack?
       $log.warn format_log("11")
       { @record_log_tag => record }.to_msgpack
