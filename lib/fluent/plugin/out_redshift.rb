@@ -93,9 +93,6 @@ class RedshiftOutput < BufferedOutput
       else
         create_gz_file_from_flat_data(tmp, chunk)
       end
-      
-    $log.warn format_log(tmp)
-    $log.warn format_log(chunk)
 
     # no data -> skip
     unless tmp
@@ -166,8 +163,6 @@ class RedshiftOutput < BufferedOutput
       $log.warn format_log("no table on redshift. table_name=#{table_name_with_schema}")
       return nil
     end
-    
-    $log.warn format_log("=#{redshift_table_columns}")
 
     # convert json to tsv format text
     gzw = nil
@@ -180,9 +175,9 @@ class RedshiftOutput < BufferedOutput
           gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
         rescue => e
           if json?
-            $log.warn format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.error format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
           else
-            $log.warn format_log("failed to create table text from msgpack. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.error format_log("failed to create table text from msgpack. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
           end
 
           $log.error_backtrace
