@@ -183,7 +183,7 @@ class RedshiftOutput < BufferedOutput
           tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
           gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
     
-          $log.warn format_log("031")
+          $log.warn format_log("text=(#{record[@record_log_tag]})")
           
         rescue => e
           if json?
