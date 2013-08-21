@@ -96,7 +96,7 @@ class RedshiftOutput < BufferedOutput
 
     # no data -> skip
     unless tmp
-      $log.debug format_log("received no valid data. ")
+      $log.warn format_log("received no valid data. ")
       return false # for debug
     end
 
@@ -113,14 +113,14 @@ class RedshiftOutput < BufferedOutput
     # copy gz on s3 to redshift
     s3_uri = "s3://#{@s3_bucket}/#{s3path}"
     sql = @copy_sql_template % [s3_uri, @aws_sec_key]
-    $log.debug  format_log("start copying. s3_uri=#{s3_uri}")
+    $log.warn  format_log("start copying. s3_uri=#{s3_uri}")
     conn = nil
     begin
       conn = PG.connect(@db_conf)
       conn.exec(sql)
-      $log.info format_log("completed copying to redshift. s3_uri=#{s3_uri}")
+      $log.warn format_log("completed copying to redshift. s3_uri=#{s3_uri}")
     rescue PG::Error => e
-      $log.error format_log("failed to copy data into redshift. s3_uri=#{s3_uri}"), :error=>e.to_s
+      $log.warn format_log("failed to copy data into redshift. s3_uri=#{s3_uri}"), :error=>e.to_s
       raise e unless e.to_s =~ IGNORE_REDSHIFT_ERROR_REGEXP
       return false # for debug
     ensure
