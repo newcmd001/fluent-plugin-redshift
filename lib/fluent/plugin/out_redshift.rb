@@ -84,6 +84,8 @@ class RedshiftOutput < BufferedOutput
 
   def write(chunk)
     $log.warn format_log("start creating gz.")
+    
+    $log.warn format_log("#{chunk}")
 
     # create a gz file
     tmp = Tempfile.new("s3-")
