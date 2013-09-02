@@ -81,43 +81,7 @@ class RedshiftOutput < BufferedOutput
   def format(tag, time, record)
     if json?
       #record.to_msgpack
-      [tag, time, record].to_msgpack
-    elsif msgpack?
-      { @record_log_tag => record }.to_msgpack
-    else
-      #"#{record[@record_log_tag]}\n"
-      "#{record}\n"
-    end
-  end
-
-  def write(chunk)
-    $log.debug format_log("start creating gz.")
-      
-    # figure out the table name
-    chunk.msgpack_each {|(tag, time_str, record)|
-
-      tag_array = tag.split(".", 4)
-      table_name = tag_array[0]
-      #table_name << "."
-      #table_name << tag_array[1]
-      time1 = Time.new
-      time1_str = time1.strftime(@time_slice_format)
-      table_name << time1_str
-      table_name << "."
-      table_name << tag_array[2]
-      table_name = table_name.gsub(@remove_tag_prefix, '') if @remove_tag_prefix
-      $log.warn "Table name: #{table_name}"
-      @redshift_tablename = String.new(table_name)
-      
-      #table_name_attribute = String.new(table_name)
-      #table_name_attribute << "Attribute"
-      #$log.warn "Table name: #{table_name}"
-      #$log.warn "Attribute table name: #{table_name_attribute}"
-      #unless table_exists?(table_name_attribute) then
-      #  create_table_attribute(table_name_attribute)
-      #end
-      
-    # put in UUID and game ID
+      tag_array = tag.split(".", 4)    # put in UUID and game ID
 
       if record.has_key?("gameId")
         record["game_id"] = record["gameId"]
@@ -200,8 +164,44 @@ class RedshiftOutput < BufferedOutput
         end
       end
       
-          record['id'] = uuid(tag_array[1], time1)
+          record['id'] = uuid(tag_array[1], time)
           record['game_id'] = tag_array[1]
+          
+      [tag, time, record].to_msgpack
+    elsif msgpack?
+      { @record_log_tag => record }.to_msgpack
+    else
+      #"#{record[@record_log_tag]}\n"
+      "#{record}\n"
+    end
+  end
+
+  def write(chunk)
+    $log.debug format_log("start creating gz.")
+      
+    # figure out the table name
+    chunk.msgpack_each {|(tag, time_str, record)|
+
+      tag_array = tag.split(".", 4)
+      table_name = tag_array[0]
+      #table_name << "."
+      #table_name << tag_array[1]
+      time1 = Time.new
+      time1_str = time1.strftime(@time_slice_format)
+      table_name << time1_str
+      table_name << "."
+      table_name << tag_array[2]
+      table_name = table_name.gsub(@remove_tag_prefix, '') if @remove_tag_prefix
+      $log.warn "Table name: #{table_name}"
+      @redshift_tablename = String.new(table_name)
+      
+      #table_name_attribute = String.new(table_name)
+      #table_name_attribute << "Attribute"
+      #$log.warn "Table name: #{table_name}"
+      #$log.warn "Attribute table name: #{table_name_attribute}"
+      #unless table_exists?(table_name_attribute) then
+      #  create_table_attribute(table_name_attribute)
+      #end
       
     }
       
