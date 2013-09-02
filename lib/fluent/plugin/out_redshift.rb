@@ -211,9 +211,6 @@ class RedshiftOutput < BufferedOutput
     
     @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
 
-    $log.warn "#{@redshift_tablename}"
-    $log.warn "#{@copy_sql_template}"
-
     # create a gz file
     tmp = Tempfile.new("s3-")
     tmp =
@@ -423,6 +420,7 @@ class RedshiftOutput < BufferedOutput
     sql =<<"SQL"
 SELECT COUNT(*) FROM pg_tables WHERE LOWER(tablename) = LOWER('#{table}');
 SQL
+    $log.warn "#{sql}"
     conn = PG.connect(@db_conf)
     raise "Could not connect the database at startup. abort." if conn == nil
     res = conn.exec(sql)
