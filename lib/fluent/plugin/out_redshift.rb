@@ -74,7 +74,8 @@ class RedshiftOutput < BufferedOutput
 
   def format(tag, time, record)
     if json?
-      record.to_msgpack
+      #record.to_msgpack
+      [tag, time, record].to_msgpack
     elsif msgpack?
       { @record_log_tag => record }.to_msgpack
     else
@@ -94,6 +95,37 @@ class RedshiftOutput < BufferedOutput
       else
         create_gz_file_from_flat_data(tmp, chunk)
       end
+      
+    # figure out the table name
+    chunk.msgpack_each {|(tag, time_str, record)|
+
+      tag_array = tag.split(".", 4)
+      table_name = tag_array[0]
+      table_name << "."
+      table_name << tag_array[1]
+      time1 = Time.new
+      time1_str = time1.strftime(@time_slice_format)
+      table_name << time1_str
+      table_name << "."
+      table_name << tag_array[2]
+      table_name = table_name.gsub(@remove_tag_prefix, '') if @remove_tag_prefix
+      $log.warn "Table name: #{table_name}"
+      
+      #table_name_attribute = String.new(table_name)
+      #table_name_attribute << "Attribute"
+      #$log.warn "Table name: #{table_name}"
+      #$log.warn "Attribute table name: #{table_name_attribute}"
+      
+      unless table_exists?(table_name) then
+        create_table(table_name)
+      end
+      #unless table_exists?(table_name_attribute) then
+      #  create_table_attribute(table_name_attribute)
+      #end
+      
+      break
+      
+    }
 
     # no data -> skip
     unless tmp
@@ -169,7 +201,7 @@ class RedshiftOutput < BufferedOutput
     gzw = nil
     begin
       gzw = Zlib::GzipWriter.new(dst_file)
-      chunk.msgpack_each do |record|
+      chunk.msgpack_each do |(tag, time_str, record)|
         begin
           #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
           hash = record
@@ -192,6 +224,17 @@ class RedshiftOutput < BufferedOutput
       gzw.close rescue nil if gzw
     end
     dst_file
+  end
+  
+  def uuid(game_id, timestamp)
+    a = String.new(game_id)
+    a << "-"
+    a << timestamp.strftime("%Y-%m-%d")
+    a << "-"
+    a << SecureRandom.hex(12)
+    $log.warn "Player action ID: #{a}"
+    
+    return a
   end
 
   def determine_delimiter(file_type)
@@ -277,6 +320,87 @@ class RedshiftOutput < BufferedOutput
       i += 1
     end while bucket.objects[s3path].exists?
     s3path
+  end
+
+  def table_exists?(table)
+    sql =<<"SQL"
+SELECT COUNT(*) FROM pg_tables WHERE LOWER(tablename) = LOWER('#{table}');
+SQL
+    conn = PG.connect(@db_conf)
+    raise "Could not connect the database at startup. abort." if conn == nil
+    res = conn.exec(sql)
+    if res[0]["count"] == "1"
+      conn.close
+      return true
+    else
+      conn.close
+      return false
+    end
+  end
+
+  def create_table(tablename)
+    sql =<<"SQL"
+CREATE TABLE "#{tablename}" (ID VARCHAR(64) NOT NULL ,
+	 FB_PLAYER_ID VARCHAR(64),
+	 GAME_ID BIGINT,
+	 SESSION_ID VARCHAR(64),
+	 TIMESTAMP TIMESTAMP,
+	 LOG_ACTION SMALLINT,
+	 TYPE VARCHAR(255),
+	 DESCRIPTION VARCHAR(255),
+	 SUCCESSFUL SMALLINT,
+	 LEVEL INTEGER,
+	 CREDIT INTEGER,
+	 EXPERIENCE INTEGER,
+	 ATTRIBUTES VARCHAR(1024),
+	 VIRTUAL_CURRENCY VARCHAR(1024),
+	 LOG_DATETIME TIMESTAMP,
+	 LENGTH BIGINT,
+ 	 TIME BIGINT,
+ 	 H BIGINT,
+	 PRIMARY KEY (ID));
+SQL
+
+    sql += @table_option if @table_option
+
+    conn = PG.connect(@db_conf)
+    raise "Could not connect the database at create_table. abort." if conn == nil
+
+    begin
+      conn.exec(sql) 
+    rescue PGError => e
+      $log.error "Error at create_table:" + e.message
+      $log.error "SQL:" + sql
+    end
+
+    $log.warn "table #{tablename} was not exist. created it."
+    conn.close
+  end
+
+  def create_table_attribute(tablename)
+    sql =<<"SQL"
+CREATE TABLE "#{tablename}" (PLAYER_ACTION_ID VARCHAR(64) NOT NULL ,
+	 KEY VARCHAR(128),
+	 VALUE VARCHAR(128),
+	 CREATED_DATETIME TIMESTAMP,
+	 UPDATED_DATETIME TIMESTAMP,
+	 PRIMARY KEY (PLAYER_ACTION_ID, KEY, VALUE));
+SQL
+
+    sql += @table_option if @table_option
+
+    conn = PG.connect(@db_conf)
+    raise "Could not connect the database at create_table. abort." if conn == nil
+
+    begin
+      conn.exec(sql) 
+    rescue PGError => e
+      $log.error "Error at create_table:" + e.message
+      $log.error "SQL:" + sql
+    end
+
+    $log.warn "table #{tablename} was not exist. created it."
+    conn.close
   end
 
   def table_name_with_schema
