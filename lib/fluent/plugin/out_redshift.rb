@@ -203,13 +203,13 @@ class RedshiftOutput < BufferedOutput
           record['id'] = uuid(tag_array[1], time1)
           record['game_id'] = tag_array[1]
       
-          @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
-      
     }
       
     unless table_exists?(@redshift_tablename) then
       create_table(@redshift_tablename)
     end
+    
+    @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
 
     # create a gz file
     tmp = Tempfile.new("s3-")
