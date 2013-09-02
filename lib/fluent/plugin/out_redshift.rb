@@ -159,7 +159,7 @@ class RedshiftOutput < BufferedOutput
             record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
             $log.warn "String timestamp - #{value}"
           rescue
-            record.delete("log_datetime")
+            record.delete("logDatetime")
           end
         end
       end
