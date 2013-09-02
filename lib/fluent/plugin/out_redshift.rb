@@ -424,6 +424,7 @@ SQL
     conn = PG.connect(@db_conf)
     raise "Could not connect the database at startup. abort." if conn == nil
     res = conn.exec(sql)
+    $log.warn "#{res[0]["count"]}"
     if res[0]["count"] == "1"
       conn.close
       return true
