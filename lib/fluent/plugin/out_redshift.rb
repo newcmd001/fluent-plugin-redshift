@@ -164,7 +164,7 @@ class RedshiftOutput < BufferedOutput
         end
       end
       
-          record['id'] = uuid(tag_array[1], time)
+          record['id'] = uuid(tag_array[1], Time.at(time))
           record['game_id'] = tag_array[1]
           
       [tag, time, record].to_msgpack
