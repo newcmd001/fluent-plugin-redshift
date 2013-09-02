@@ -38,6 +38,7 @@ class RedshiftOutput < BufferedOutput
   config_param :redshift_copy_base_options, :string , :default => "FILLRECORD ACCEPTANYDATE TRUNCATECOLUMNS"
   config_param :redshift_copy_options, :string , :default => nil
   config_param :time_slice_format, :string, :default => '.y%Y.m%m'
+  config_param :remove_tag_prefix, :string, :default => 'action.'
   # file format
   config_param :file_type, :string, :default => nil  # json, tsv, csv, msgpack
   config_param :delimiter, :string, :default => nil
@@ -71,6 +72,10 @@ class RedshiftOutput < BufferedOutput
     options[:s3_endpoint] = @s3_endpoint if @s3_endpoint
     @s3 = AWS::S3.new(options)
     @bucket = @s3.buckets[@s3_bucket]
+
+    if remove_tag_prefix = @remove_tag_prefix
+      @remove_tag_prefix = Regexp.new('^' + Regexp.escape(remove_tag_prefix))
+    end
   end
 
   def format(tag, time, record)
@@ -87,6 +92,40 @@ class RedshiftOutput < BufferedOutput
 
   def write(chunk)
     $log.debug format_log("start creating gz.")
+      
+    # figure out the table name
+    chunk.msgpack_each {|(tag, time_str, record)|
+
+      tag_array = tag.split(".", 4)
+      table_name = tag_array[0]
+      #table_name << "."
+      #table_name << tag_array[1]
+      time1 = Time.new
+      time1_str = time1.strftime(@time_slice_format)
+      table_name << time1_str
+      table_name << "."
+      table_name << tag_array[2]
+      table_name = table_name.gsub(@remove_tag_prefix, '') if @remove_tag_prefix
+      $log.warn "Table name: #{table_name}"
+      @redshift_tablename = String.new(table_name)
+      
+      #table_name_attribute = String.new(table_name)
+      #table_name_attribute << "Attribute"
+      #$log.warn "Table name: #{table_name}"
+      #$log.warn "Attribute table name: #{table_name_attribute}"
+      
+      unless table_exists?(@redshift_tablename) then
+        create_table(@redshift_tablename)
+      end
+      #unless table_exists?(table_name_attribute) then
+      #  create_table_attribute(table_name_attribute)
+      #end
+      
+      @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
+      
+      break
+      
+    }
       
     # put in UUID and game ID
     chunk.msgpack_each {|(tag, time_str, record)|
@@ -185,40 +224,6 @@ class RedshiftOutput < BufferedOutput
       else
         create_gz_file_from_flat_data(tmp, chunk)
       end
-      
-    # figure out the table name
-    chunk.msgpack_each {|(tag, time_str, record)|
-
-      tag_array = tag.split(".", 4)
-      table_name = tag_array[0]
-      table_name << "."
-      table_name << tag_array[1]
-      time1 = Time.new
-      time1_str = time1.strftime(@time_slice_format)
-      table_name << time1_str
-      table_name << "."
-      table_name << tag_array[2]
-      table_name = table_name.gsub(@remove_tag_prefix, '') if @remove_tag_prefix
-      $log.warn "Table name: #{table_name}"
-      @redshift_tablename = String.new(table_name)
-      
-      #table_name_attribute = String.new(table_name)
-      #table_name_attribute << "Attribute"
-      #$log.warn "Table name: #{table_name}"
-      #$log.warn "Attribute table name: #{table_name_attribute}"
-      
-      unless table_exists?(@redshift_tablename) then
-        create_table(@redshift_tablename)
-      end
-      #unless table_exists?(table_name_attribute) then
-      #  create_table_attribute(table_name_attribute)
-      #end
-      
-      @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
-      
-      break
-      
-    }
 
     # no data -> skip
     unless tmp
