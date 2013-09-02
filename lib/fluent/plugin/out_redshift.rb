@@ -111,20 +111,20 @@ class RedshiftOutput < BufferedOutput
       table_name << tag_array[2]
       table_name = table_name.gsub(@remove_tag_prefix, '') if @remove_tag_prefix
       $log.warn "Table name: #{table_name}"
+      @redshift_tablename = String.new(table_name)
       
       #table_name_attribute = String.new(table_name)
       #table_name_attribute << "Attribute"
       #$log.warn "Table name: #{table_name}"
       #$log.warn "Attribute table name: #{table_name_attribute}"
       
-      #unless table_exists?(table_name) then
-      #  create_table(table_name)
-      #end
+      unless table_exists?(@redshift_tablename) then
+        create_table(@redshift_tablename)
+      end
       #unless table_exists?(table_name_attribute) then
       #  create_table_attribute(table_name_attribute)
       #end
       
-      @redshift_tablename = String.new(table_name)
       @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
       
       break
