@@ -357,9 +357,9 @@ class RedshiftOutput < BufferedOutput
 
   def fetch_columns_sql_with_schema
     @fetch_columns_sql ||= if @redshift_schemaname
-                             "select column_name from INFORMATION_SCHEMA.COLUMNS where table_schema = '#{@redshift_schemaname}' and table_name = '#{@redshift_tablename}' order by ordinal_position;"
+                             "select column_name from INFORMATION_SCHEMA.COLUMNS where table_schema = '#{@redshift_schemaname}' and table_name = LOWER('#{@redshift_tablename}') order by ordinal_position;"
                            else
-                             "select column_name from INFORMATION_SCHEMA.COLUMNS where table_name = '#{@redshift_tablename}' order by ordinal_position;"
+                             "select column_name from INFORMATION_SCHEMA.COLUMNS where table_name = LOWER('#{@redshift_tablename}') order by ordinal_position;"
                            end
   end
 
