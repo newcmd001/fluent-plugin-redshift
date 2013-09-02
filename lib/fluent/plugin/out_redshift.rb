@@ -18,7 +18,7 @@ class RedshiftOutput < BufferedOutput
     require 'csv'
   end
 
-  config_param :record_log_tag, :string, :default => 'log'
+  #config_param :record_log_tag, :string, :default => 'log'
   # s3
   config_param :aws_key_id, :string
   config_param :aws_sec_key, :string
@@ -74,23 +74,17 @@ class RedshiftOutput < BufferedOutput
 
   def format(tag, time, record)
     if json?
-      $log.warn format_log("10 #{record}")
-      $log.warn format_log("10")
       record.to_msgpack
-      $log.warn format_log("10 #{record}")
     elsif msgpack?
-      $log.warn format_log("11")
       { @record_log_tag => record }.to_msgpack
     else
-      $log.warn format_log("12")
-      "#{record[@record_log_tag]}\n"
+      #"#{record[@record_log_tag]}\n"
+      "#{record}\n"
     end
   end
 
   def write(chunk)
-    $log.warn format_log("start creating gz.")
-      
-    $log.warn format_log("0")
+    $log.debug format_log("start creating gz.")
 
     # create a gz file
     tmp = Tempfile.new("s3-")
@@ -103,11 +97,9 @@ class RedshiftOutput < BufferedOutput
 
     # no data -> skip
     unless tmp
-      $log.warn format_log("received no valid data. ")
+      $log.debug format_log("received no valid data. ")
       return false # for debug
     end
-      
-    $log.warn format_log("1")
 
     # create a file path with time format
     s3path = create_s3path(@bucket, @path)
@@ -122,14 +114,14 @@ class RedshiftOutput < BufferedOutput
     # copy gz on s3 to redshift
     s3_uri = "s3://#{@s3_bucket}/#{s3path}"
     sql = @copy_sql_template % [s3_uri, @aws_sec_key]
-    $log.warn  format_log("start copying. s3_uri=#{s3_uri}")
+    $log.debug  format_log("start copying. s3_uri=#{s3_uri}")
     conn = nil
     begin
       conn = PG.connect(@db_conf)
       conn.exec(sql)
-      $log.warn format_log("completed copying to redshift. s3_uri=#{s3_uri}")
+      $log.info format_log("completed copying to redshift. s3_uri=#{s3_uri}")
     rescue PG::Error => e
-      $log.warn format_log("failed to copy data into redshift. s3_uri=#{s3_uri}"), :error=>e.to_s
+      $log.error format_log("failed to copy data into redshift. s3_uri=#{s3_uri}"), :error=>e.to_s
       raise e unless e.to_s =~ IGNORE_REDSHIFT_ERROR_REGEXP
       return false # for debug
     ensure
@@ -166,17 +158,12 @@ class RedshiftOutput < BufferedOutput
   def create_gz_file_from_structured_data(dst_file, chunk, delimiter)
     # fetch the table definition from redshift
     redshift_table_columns = fetch_table_columns
-      
-    $log.warn format_log("01")
     if redshift_table_columns == nil
-      $log.warn format_log("02 error")
       raise "failed to fetch the redshift table definition."
     elsif redshift_table_columns.empty?
       $log.warn format_log("no table on redshift. table_name=#{table_name_with_schema}")
       return nil
     end
-    
-    $log.warn format_log("03")
 
     # convert json to tsv format text
     gzw = nil
@@ -184,17 +171,17 @@ class RedshiftOutput < BufferedOutput
       gzw = Zlib::GzipWriter.new(dst_file)
       chunk.msgpack_each do |record|
         begin
-          hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
+          #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
+          hash = record
           tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
           gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
-    
-          $log.warn format_log("text=(#{record[@record_log_tag]})")
-          
         rescue => e
           if json?
-            $log.warn format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            #$log.error format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.error format_log("failed to create table text from json. text=(#{record})"), :error=>$!.to_s
           else
-            $log.warn format_log("failed to create table text from msgpack. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            #$log.error format_log("failed to create table text from msgpack. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.error format_log("failed to create table text from msgpack. text=(#{record})"), :error=>$!.to_s
           end
 
           $log.error_backtrace
@@ -205,8 +192,6 @@ class RedshiftOutput < BufferedOutput
       gzw.close rescue nil if gzw
     end
     dst_file
-    
-    $log.warn format_log("04")
   end
 
   def determine_delimiter(file_type)
@@ -251,8 +236,6 @@ class RedshiftOutput < BufferedOutput
 
   def hash_to_table_text(redshift_table_columns, hash, delimiter)
     return "" unless hash
-          
-    $log.warn format_log("hash_to_table_text - data=#{hash} table_columns=#{redshift_table_columns}")
 
     # extract values from hash
     val_list = redshift_table_columns.collect do |cn|
