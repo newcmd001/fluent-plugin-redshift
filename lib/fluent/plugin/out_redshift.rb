@@ -113,22 +113,11 @@ class RedshiftOutput < BufferedOutput
       #table_name_attribute << "Attribute"
       #$log.warn "Table name: #{table_name}"
       #$log.warn "Attribute table name: #{table_name_attribute}"
-      
-      unless table_exists?(@redshift_tablename) then
-        create_table(@redshift_tablename)
-      end
       #unless table_exists?(table_name_attribute) then
       #  create_table_attribute(table_name_attribute)
       #end
       
-      @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
-      
-      break
-      
-    }
-      
     # put in UUID and game ID
-    chunk.msgpack_each {|(tag, time_str, record)|
 
       if record.has_key?("gameId")
         record["game_id"] = record["gameId"]
@@ -214,7 +203,13 @@ class RedshiftOutput < BufferedOutput
           record['id'] = uuid(tag_array[1], time1)
           record['game_id'] = tag_array[1]
       
+          @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
+      
     }
+      
+    unless table_exists?(@redshift_tablename) then
+      create_table(@redshift_tablename)
+    end
 
     # create a gz file
     tmp = Tempfile.new("s3-")
