@@ -87,6 +87,95 @@ class RedshiftOutput < BufferedOutput
 
   def write(chunk)
     $log.debug format_log("start creating gz.")
+      
+    # put in UUID and game ID
+    chunk.msgpack_each {|(tag, time_str, record)|
+
+      if record.has_key?("gameId")
+        record["game_id"] = record["gameId"]
+        record.delete("gameId")
+      end
+      if record.has_key?("playerId")
+        record["fb_player_id"] = record["playerId"]
+        record.delete("playerId")
+      end
+      if record.has_key?("virtualCurrency")
+        record["virtual_currency"] = record["virtualCurrency"]
+        record.delete("virtualCurrency")
+      end
+      if record.has_key?("session_id")
+        record.delete("session_id")
+      elsif record.has_key?("sessionId")
+        key = "session_id"
+        record["session_id"] = record["sessionId"]
+        record.delete("sessionId")
+      end
+      
+      if record.has_key?("logAction")
+        key = "log_action"
+        record["log_action"] = record["logAction"]
+        record.delete("logAction")
+      end
+      if record.has_key?("logaction")
+        key = "log_action"
+        record["log_action"] = record["logaction"]
+        record.delete("logaction")
+      end
+      if record.has_key?("log_action")
+        record.delete("log_action") unless value.is_a? Integer
+      end
+      
+      if record.has_key?("successful")
+        if value == "true"
+        record["successful"] = 1
+        elsif value == "false"
+        record["successful"] = 0
+        else
+          record["successful"] = 1 unless value.is_a? Integer
+        end
+      end
+      
+      if record.has_key?("requirements")
+        record.delete("requirements")
+      end
+      if record.has_key?("rewards")
+        record.delete("rewards")
+      end
+      if record.has_key?("action")
+        record.delete("action")
+      end
+      if record.has_key?("_eventtype")
+        record.delete("_eventtype")
+      end
+      if record.has_key?("attributes")
+        record.delete("attributes")
+      end
+      
+      if record.has_key?("logDatetime")
+        key = "log_datetime"
+        record["log_datetime"] = record["logDatetime"]
+        record.delete("logDatetime")
+        $log.warn "log_datetime = #{value}"
+        begin value_i = Integer(value)
+          #Timestamp is in UNIX timestamp format
+          time2 = Time.at(value_i)
+          record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
+          $log.warn "Integer timestamp - #{value}"
+        rescue
+          begin
+            time2 = Date.strptime("%a, %d %b %Y %H:%M:%S %z")
+            record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
+            $log.warn "String timestamp - #{value}"
+          rescue
+            next
+          end
+        end
+      end
+      
+          record['id'] = uuid(tag_array[1], time1)
+          record['game_id'] = tag_array[1]
+      
+    }
 
     # create a gz file
     tmp = Tempfile.new("s3-")
@@ -208,90 +297,6 @@ class RedshiftOutput < BufferedOutput
       chunk.msgpack_each do |(tag, time_str, record)|
         begin
           #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
-          
-      if record.has_key?("gameId")
-        record["game_id"] = record["gameId"]
-        record.delete("gameId")
-      end
-      if record.has_key?("playerId")
-        record["fb_player_id"] = record["playerId"]
-        record.delete("playerId")
-      end
-      if record.has_key?("virtualCurrency")
-        record["virtual_currency"] = record["virtualCurrency"]
-        record.delete("virtualCurrency")
-      end
-      if record.has_key?("session_id")
-        record.delete("session_id")
-      elsif record.has_key?("sessionId")
-        key = "session_id"
-        record["session_id"] = record["sessionId"]
-        record.delete("sessionId")
-      end
-      
-      if record.has_key?("logAction")
-        key = "log_action"
-        record["log_action"] = record["logAction"]
-        record.delete("logAction")
-      end
-      if record.has_key?("logaction")
-        key = "log_action"
-        record["log_action"] = record["logaction"]
-        record.delete("logaction")
-      end
-      if record.has_key?("log_action")
-        record.delete("log_action") unless value.is_a? Integer
-      end
-      
-      if record.has_key?("successful")
-        if value == "true"
-        record["successful"] = 1
-        elsif value == "false"
-        record["successful"] = 0
-        else
-          record["successful"] = 1 unless value.is_a? Integer
-        end
-      end
-      
-      if record.has_key?("requirements")
-        record.delete("requirements")
-      end
-      if record.has_key?("rewards")
-        record.delete("rewards")
-      end
-      if record.has_key?("action")
-        record.delete("action")
-      end
-      if record.has_key?("_eventtype")
-        record.delete("_eventtype")
-      end
-      if record.has_key?("attributes")
-        record.delete("attributes")
-      end
-      
-      if record.has_key?("logDatetime")
-        key = "log_datetime"
-        record["log_datetime"] = record["logDatetime"]
-        record.delete("logDatetime")
-        $log.warn "log_datetime = #{value}"
-        begin value_i = Integer(value)
-          #Timestamp is in UNIX timestamp format
-          time2 = Time.at(value_i)
-          record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
-          $log.warn "Integer timestamp - #{value}"
-        rescue
-          begin
-            time2 = Date.strptime("%a, %d %b %Y %H:%M:%S %z")
-            record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
-            $log.warn "String timestamp - #{value}"
-          rescue
-            next
-          end
-        end
-      end
-      
-          record['id'] = uuid(tag_array[1], time1)
-          record['game_id'] = tag_array[1]
           
           hash = record
           tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
