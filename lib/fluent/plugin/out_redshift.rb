@@ -37,7 +37,7 @@ class RedshiftOutput < BufferedOutput
   config_param :redshift_schemaname, :string, :default => nil
   config_param :redshift_copy_base_options, :string , :default => "FILLRECORD ACCEPTANYDATE TRUNCATECOLUMNS"
   config_param :redshift_copy_options, :string , :default => nil
-  config_param :time_slice_format, :string, :default => '.y%Y.m%m'
+  config_param :time_slice_format, :string, :default => '.y%Y.m%m.d%d'
   config_param :remove_tag_prefix, :string, :default => 'action.'
   # file format
   config_param :file_type, :string, :default => nil  # json, tsv, csv, msgpack
