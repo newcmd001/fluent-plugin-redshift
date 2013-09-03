@@ -195,13 +195,11 @@ class RedshiftOutput < BufferedOutput
       $log.warn "Table name: #{table_name}"
       @redshift_tablename = String.new(table_name)
       
-      #table_name_attribute = String.new(table_name)
-      #table_name_attribute << "Attribute"
-      #$log.warn "Table name: #{table_name}"
-      #$log.warn "Attribute table name: #{table_name_attribute}"
-      #unless table_exists?(table_name_attribute) then
-      #  create_table_attribute(table_name_attribute)
-      #end
+      table_name_attribute = String.new(table_name)
+      table_name_attribute << "Attribute"
+      $log.warn "Table name: #{table_name}"
+      $log.warn "Attribute table name: #{table_name_attribute}"
+      @redshift_attributetablename = String.new(table_name_attribute)
       
       break
       
@@ -210,8 +208,12 @@ class RedshiftOutput < BufferedOutput
     unless table_exists?(@redshift_tablename) then
       create_table(@redshift_tablename)
     end
+      unless table_exists?(@redshift_attributetablename) then
+        create_table_attribute(@redshift_attributetablename)
+      end
     
     @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
+    @copy_sql_template_attribute = "copy \"#{attribute_table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
 
     # create a gz file
     tmp = Tempfile.new("s3-")
@@ -344,6 +346,7 @@ class RedshiftOutput < BufferedOutput
     end
   end
 
+  #TODO attribute
   def fetch_table_columns
     conn = PG.connect(@db_conf)
     begin
@@ -357,6 +360,7 @@ class RedshiftOutput < BufferedOutput
     end
   end
 
+  #TODO attribute
   def fetch_columns_sql_with_schema
     @fetch_columns_sql ||= if @redshift_schemaname
                              "select column_name from INFORMATION_SCHEMA.COLUMNS where table_schema = '#{@redshift_schemaname}' and table_name = LOWER('#{@redshift_tablename}') order by ordinal_position;"
@@ -504,6 +508,14 @@ SQL
                                   "#{@redshift_schemaname}.#{@redshift_tablename}"
                                 else
                                   @redshift_tablename
+                                end
+  end
+
+  def attribute_table_name_with_schema
+    @attribute_table_name_with_schema ||= if @redshift_schemaname
+                                  "#{@redshift_schemaname}.#{@redshift_attributetablename}"
+                                else
+                                  @redshift_attributetablename
                                 end
   end
 end
