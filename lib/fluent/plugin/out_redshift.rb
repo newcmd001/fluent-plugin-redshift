@@ -34,6 +34,7 @@ class RedshiftOutput < BufferedOutput
   config_param :redshift_user, :string
   config_param :redshift_password, :string
   config_param :redshift_tablename, :string
+  config_param :redshift_attributetablename, :string, :default => 'Attribute'
   config_param :redshift_schemaname, :string, :default => nil
   config_param :redshift_copy_base_options, :string , :default => "FILLRECORD ACCEPTANYDATE TRUNCATECOLUMNS"
   config_param :redshift_copy_options, :string , :default => nil
