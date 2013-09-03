@@ -114,16 +114,16 @@ class RedshiftOutput < BufferedOutput
         record.delete("logaction")
       end
       if record.has_key?("log_action")
-        record.delete("log_action") unless value.is_a? Integer
+        record.delete("log_action") unless record["log_action"].is_a? Integer
       end
       
       if record.has_key?("successful")
-        if value == "true"
+        if record["successful"] == "true"
         record["successful"] = 1
-        elsif value == "false"
+        elsif record["successful"] == "false"
         record["successful"] = 0
         else
-          record["successful"] = 1 unless value.is_a? Integer
+          record["successful"] = 1 unless record["successful"].is_a? Integer
         end
       end
       
@@ -147,17 +147,17 @@ class RedshiftOutput < BufferedOutput
         key = "log_datetime"
         record["log_datetime"] = record["logDatetime"]
         record.delete("logDatetime")
-        $log.warn "log_datetime = #{value}"
+        $log.warn "log_datetime = #{record["log_datetime"]}"
         begin value_i = Integer(value)
           #Timestamp is in UNIX timestamp format
           time2 = Time.at(value_i)
           record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
-          $log.warn "Integer timestamp - #{value}"
+          $log.warn "Integer timestamp - #{record["log_datetime"]}"
         rescue
           begin
             time2 = Date.strptime("%a, %d %b %Y %H:%M:%S %z")
             record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
-            $log.warn "String timestamp - #{value}"
+            $log.warn "String timestamp - #{record["log_datetime"]}"
           rescue
             record.delete("logDatetime")
           end
