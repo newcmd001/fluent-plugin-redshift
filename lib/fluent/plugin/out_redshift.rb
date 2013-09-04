@@ -98,7 +98,8 @@ class RedshiftOutput < BufferedOutput
       end
       if record.has_key?("session_id")
         record.delete("session_id")
-      elsif record.has_key?("sessionId")
+      end
+      if record.has_key?("sessionId")
         key = "session_id"
         record["session_id"] = record["sessionId"]
         record.delete("sessionId")
