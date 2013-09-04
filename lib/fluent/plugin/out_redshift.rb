@@ -140,9 +140,9 @@ class RedshiftOutput < BufferedOutput
       if record.has_key?("_eventtype")
         record.delete("_eventtype")
       end
-      if record.has_key?("attributes")
-        record.delete("attributes")
-      end
+      #if record.has_key?("attributes")
+      #  record.delete("attributes")
+      #end
       
       if record.has_key?("logDatetime")
         key = "log_datetime"
@@ -303,8 +303,12 @@ class RedshiftOutput < BufferedOutput
         begin
           #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
       if record.has_key?("attributes")
-        record_attributes = record["attributes"]
+        record_attributes = record["attributes"].clone
+        record_attributes.each do |key, value|
+          $log.warn format_log("Key: #{key}, Value: #{value}")
+        end
         $log.warn format_log("#{record_attributes}")
+        record.delete("attributes")
       end
           
           hash = record
