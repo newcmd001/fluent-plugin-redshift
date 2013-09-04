@@ -161,6 +161,10 @@ class RedshiftOutput < BufferedOutput
           end
         end
       end
+    
+    time1 = Time.at(time)
+    time_str = time1.strftime("%Y-%m-%d %H:%M:%S.%6N")
+    record['timestamp'] = time_str
       
           record['id'] = uuid(tag_array[1], Time.at(time))
           record['game_id'] = tag_array[1]
