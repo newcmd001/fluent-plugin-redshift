@@ -218,12 +218,11 @@ class RedshiftOutput < BufferedOutput
 
     # create a gz file
     tmp = Tempfile.new("s3-")
-    tmp2 = Tempfile.new("s3-attribute-")
-    tmp, tmp2 =
+    tmp =
       if json? || msgpack?
-        create_gz_file_from_structured_data(tmp, tmp2, chunk, @delimiter)
+        create_gz_file_from_structured_data(tmp, chunk, @delimiter)
       else
-        create_gz_file_from_flat_data(tmp, tmp2, chunk)
+        create_gz_file_from_flat_data(tmp, chunk)
       end
 
     # no data -> skip
@@ -275,7 +274,7 @@ class RedshiftOutput < BufferedOutput
     @file_type == 'msgpack'
   end
 
-  def create_gz_file_from_flat_data(dst_file, dst_file_2, chunk)
+  def create_gz_file_from_flat_data(dst_file, chunk)
     gzw = nil
     begin
       gzw = Zlib::GzipWriter.new(dst_file)
@@ -283,10 +282,10 @@ class RedshiftOutput < BufferedOutput
     ensure
       gzw.close rescue nil if gzw
     end
-    dst_file, dst_file_2
+    dst_file
   end
 
-  def create_gz_file_from_structured_data(dst_file, dst_file_2, chunk, delimiter)
+  def create_gz_file_from_structured_data(dst_file, chunk, delimiter)
     # fetch the table definition from redshift
     redshift_table_columns = fetch_table_columns
     if redshift_table_columns == nil
@@ -303,12 +302,6 @@ class RedshiftOutput < BufferedOutput
       chunk.msgpack_each do |(tag, time_str, record)|
         begin
           #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
-      if record.has_key?("attributes")
-        record_attributes = record["attributes"].clone
-        record.delete("attributes")
-      $log.warn format_log("#{record}")
-      $log.warn format_log("#{record_attributes}")
-      end
           
           hash = record
           tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
@@ -329,7 +322,7 @@ class RedshiftOutput < BufferedOutput
     ensure
       gzw.close rescue nil if gzw
     end
-    dst_file, dst_file_2
+    dst_file
   end
   
   def uuid(game_id, timestamp)
