@@ -351,13 +351,14 @@ class RedshiftOutput < BufferedOutput
       if record.has_key?("attributes")
         record_attributes = record["attributes"].clone
         record_attributes.each do |key, value|
-          $log.warn format_log("paa_record")
+          paa_record = Hash.new
           paa_record["key"] = key
           paa_record["value"] = value
           paa_record["player_action_id"] = record["id"]
           time1 = Time.at(time_str)
           paa_record["created_datetime"] = time1.strftime("%Y-%m-%d %H:%M:%S.%6N")
           paa_record["updated_datetime"] = time1.strftime("%Y-%m-%d %H:%M:%S.%6N")
+          $log.warn format_log("#{paa_record}")
         end
       end
           
