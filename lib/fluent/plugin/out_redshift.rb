@@ -218,12 +218,15 @@ class RedshiftOutput < BufferedOutput
 
     # create a gz file
     tmp = Tempfile.new("s3-")
+    tmp2 = Tempfile.new("s3-attributes-")
     tmp =
       if json? || msgpack?
         create_gz_file_from_structured_data(tmp, chunk, @delimiter)
       else
         create_gz_file_from_flat_data(tmp, chunk)
       end
+    tmp2 =
+        create_gz_file_from_structured_data_attribute(tmp2, chunk, @delimiter)
 
     # no data -> skip
     unless tmp
@@ -303,17 +306,64 @@ class RedshiftOutput < BufferedOutput
         begin
           #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
       if record.has_key?("attributes")
-        record_attributes = record["attributes"].clone
-        record_attributes.each do |key, value|
-          $log.warn format_log("Key: #{key}, Value: #{value}")
-        end
-        $log.warn format_log("#{record_attributes}")
         record.delete("attributes")
       end
           
           hash = record
           tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
           gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
+        rescue => e
+          if json?
+            #$log.error format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.error format_log("failed to create table text from json. text=(#{record})"), :error=>$!.to_s
+          else
+            #$log.error format_log("failed to create table text from msgpack. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
+            $log.error format_log("failed to create table text from msgpack. text=(#{record})"), :error=>$!.to_s
+          end
+
+          $log.error_backtrace
+        end
+      end
+      return nil unless gzw.pos > 0
+    ensure
+      gzw.close rescue nil if gzw
+    end
+    dst_file
+  end
+
+  def create_gz_file_from_structured_data_attribute(dst_file, chunk, delimiter)
+    # fetch the table definition from redshift
+    #redshift_table_columns = fetch_table_columns
+    #if redshift_table_columns == nil
+    #  raise "failed to fetch the redshift table definition."
+    #elsif redshift_table_columns.empty?
+    #  $log.warn format_log("no table on redshift. table_name=#{table_name_with_schema}")
+    #  return nil
+    #end
+
+    # convert json to tsv format text
+    gzw = nil
+    begin
+      gzw = Zlib::GzipWriter.new(dst_file)
+      chunk.msgpack_each do |(tag, time_str, record)|
+        begin
+          #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
+      if record.has_key?("attributes")
+        record_attributes = record["attributes"].clone
+        record_attributes.each do |key, value|
+          $log.warn format_log("paa_record")
+          paa_record["key"] = key
+          paa_record["value"] = value
+          paa_record["player_action_id"] = record["id"]
+          time1 = Time.at(time_str)
+          paa_record["created_datetime"] = time1.strftime("%Y-%m-%d %H:%M:%S.%6N")
+          paa_record["updated_datetime"] = time1.strftime("%Y-%m-%d %H:%M:%S.%6N")
+        end
+      end
+          
+          hash = record
+          #tsv_text = hash_to_table_text(redshift_table_columns, hash, delimiter)
+          #gzw.write(tsv_text) if tsv_text and not tsv_text.empty?
         rescue => e
           if json?
             #$log.error format_log("failed to create table text from json. text=(#{record[@record_log_tag]})"), :error=>$!.to_s
