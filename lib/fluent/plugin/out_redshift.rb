@@ -303,7 +303,8 @@ class RedshiftOutput < BufferedOutput
         begin
           #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
       if record.has_key?("attributes")
-        $log.warn format_log("#{record[\"attributes\"]}")
+        record_attributes = record["attributes"]
+        $log.warn format_log("#{record_attributes}")
       end
           
           hash = record
