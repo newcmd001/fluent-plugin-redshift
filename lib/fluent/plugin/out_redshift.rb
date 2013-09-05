@@ -305,7 +305,7 @@ class RedshiftOutput < BufferedOutput
       chunk.msgpack_each do |(tag, time_str, record)|
         begin
           #hash = json? ? json_to_hash(record[@record_log_tag]) : record[@record_log_tag]
-      if record.has_key?("attributes")
+      if record.has_key?("attributes") and !record["attributes"].nil?
         record_attributes = record["attributes"].clone
         record_attributes_str = ""
         first = true
