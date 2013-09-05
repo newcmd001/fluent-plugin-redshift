@@ -310,7 +310,7 @@ class RedshiftOutput < BufferedOutput
         record_attributes_str = ""
         first = true
         record_attributes.each do |key, value|
-          record_attributes_str << "&" unless first
+          record_attributes_str << "," unless first
           record_attributes_str << key
           record_attributes_str << "="
           record_attributes_str << value
