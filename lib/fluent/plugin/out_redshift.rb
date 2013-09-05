@@ -143,11 +143,10 @@ class RedshiftOutput < BufferedOutput
       end
       
       if record.has_key?("logDatetime")
-        key = "log_datetime"
         record["log_datetime"] = record["logDatetime"]
         record.delete("logDatetime")
         $log.warn "log_datetime = #{record["log_datetime"]}"
-        begin value_i = Integer(value)
+        begin value_i = Integer(record["log_datetime"])
           #Timestamp is in UNIX timestamp format
           time2 = Time.at(value_i)
           record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
