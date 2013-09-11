@@ -312,7 +312,7 @@ class RedshiftOutput < BufferedOutput
           record_attributes_str << "," unless first
           record_attributes_str << key
           record_attributes_str << "="
-          record_attributes_str << value
+          record_attributes_str << value unless value.nil?
           first = false
         end
         $log.warn format_log("#{record_attributes_str}")
