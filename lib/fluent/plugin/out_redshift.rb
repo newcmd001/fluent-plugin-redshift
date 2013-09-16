@@ -210,16 +210,13 @@ class RedshiftOutput < BufferedOutput
     unless table_exists?(@redshift_tablename) then
       create_table(@redshift_tablename)
     end
-      unless table_exists?(@redshift_attributetablename) then
-        create_table_attribute(@redshift_attributetablename)
-      end
     
-    @copy_sql_template = "copy \"#{table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
-    @copy_sql_template_attribute = "copy \"#{attribute_table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
+    @copy_sql_template = "copy \"#{table_name}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
+    #@copy_sql_template_attribute = "copy \"#{attribute_table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
 
     # create a gz file
     tmp = Tempfile.new("s3-")
-    tmp2 = Tempfile.new("s3-attributes-")
+    #tmp2 = Tempfile.new("s3-attributes-")
     tmp =
       if json? || msgpack?
         create_gz_file_from_structured_data(tmp, chunk, @delimiter)
