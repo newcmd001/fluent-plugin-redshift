@@ -152,11 +152,13 @@ class RedshiftOutput < BufferedOutput
           record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
           $log.warn "Integer timestamp - #{record["log_datetime"]}"
         rescue
+          $log.warn "Not integer timestamp"
           begin
-            time2 = Date.strptime("%a, %d %b %Y %H:%M:%S %z")
+            time2 = DateTime.strptime(record["log_datetime"], "%a, %d %b %Y %H:%M:%S %z")
             record["log_datetime"] = time2.strftime("%Y-%m-%d %H:%M:%S.%6N")
             $log.warn "String timestamp - #{record["log_datetime"]}"
           rescue
+            $log.warn "Cannot la"
             record.delete("logDatetime")
           end
         end
