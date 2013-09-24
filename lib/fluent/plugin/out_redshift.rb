@@ -213,7 +213,7 @@ class RedshiftOutput < BufferedOutput
       create_table(@redshift_tablename)
     end
     
-    @copy_sql_template = "copy \"#{table_name}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
+    @copy_sql_template = "copy \"#{@redshift_tablename}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
     #@copy_sql_template_attribute = "copy \"#{attribute_table_name_with_schema}\" from '%s' CREDENTIALS 'aws_access_key_id=#{@aws_key_id};aws_secret_access_key=%s' delimiter '#{@delimiter}' GZIP ESCAPE #{@redshift_copy_base_options} #{@redshift_copy_options};"
 
     # create a gz file
